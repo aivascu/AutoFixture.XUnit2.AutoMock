@@ -1,7 +1,6 @@
 ﻿namespace Objectivity.AutoFixture.XUnit2.Core.Tests.Attributes
 {
     using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
 
@@ -31,16 +30,16 @@
             Five = 16,
         }
 
-        public static IEnumerable<object[]> CustomizationUsageTestData { get; } = new[]
+        public static TheoryData<object> CustomizationUsageTestData { get; } = new()
         {
-            new object[] { 1 },
-            new object[] { 1.5f },
-            new object[] { "test" },
-            new object[] { false },
-            new object[] { Numbers.Five },
-            new object[] { DateTime.Now },
-            new object[] { ValueTuple.Create(5) },
-            new object[] { Tuple.Create(1, 2) },
+            { 1 },
+            { 1.5f },
+            { "test" },
+            { false },
+            { Numbers.Five },
+            { DateTime.UtcNow },
+            { ValueTuple.Create(5) },
+            { Tuple.Create(1, 2) },
         };
 
         [Fact(DisplayName = "GIVEN uninitialized argument WHEN constructor is invoked THEN exception is thrown")]
@@ -87,9 +86,9 @@
         [InlineData(1, 1)]
         [InlineData("a", "a")]
         [Theory(DisplayName = "GIVEN identical arguments WHEN constructor is invoked THEN unique parameters are properly assigned")]
-        public void GivenIdenticalArguments_WhenConstructorIsInvoked_ThenUniqueParametersAreProperlyAssigned(
-            object first,
-            object second)
+        public void GivenIdenticalArguments_WhenConstructorIsInvoked_ThenUniqueParametersAreProperlyAssigned<T>(
+            T first,
+            T second)
         {
             // Arrange
             var attribute = new ExceptAttribute(first, second);
@@ -115,8 +114,8 @@
 
         [MemberData(nameof(CustomizationUsageTestData))]
         [Theory(DisplayName = "GIVEN valid parameters WHEN customization is used THEN expected values are generated")]
-        public void GivenValidParameters_WhenCustomizationIsUsed_ThenExpectedValuesAreGenerated(
-            object item)
+        public void GivenValidParameters_WhenCustomizationIsUsed_ThenExpectedValuesAreGenerated<T>(
+            T item)
         {
             // Arrange
             var attribute = new ExceptAttribute(item);
