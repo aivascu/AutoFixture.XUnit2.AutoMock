@@ -1,0 +1,65 @@
+name: '🐕‍🦺 Snyk: Vulnerability Analysis'
+
+on:
+  pull_request:
+    paths:
+    - 'src/**'
+    - '!src/qodana.yml'
+    - '.github/workflows/snyk.yml'
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+    - 'master'
+    paths:
+    - 'src/**'
+    - '!src/qodana.yml'
+    - '.github/workflows/snyk.yml'
+  schedule:
+    - cron: '14 6 * * 0' # Random time
+  workflow_dispatch:
+  
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: 📥 checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+      - name: 🏗️ restore dependencies
+        run: dotnet restore ./src/Objectivity.AutoFixture.XUnit2.AutoMock.sln
+      - name: 🔬 snyk opensource scan
+        uses: snyk/actions/dotnet@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --sarif-file-output=snyk/opensource.sarif --all-projects --exclude=Objectivity.AutoFixture.XUnit2.AutoFakeItEasy.Tests,Objectivity.AutoFixture.XUnit2.AutoMoq.Tests,Objectivity.AutoFixture.XUnit2.AutoNSubstitute.Tests,Objectivity.AutoFixture.XUnit2.Core.Tests
+      - name: 🔬 snyk code scan
+        uses: snyk/actions/dotnet@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --sarif-file-output=snyk/code.sarif
+          command: code test
+      - name: 📈 snyk monitor
+        uses: snyk/actions/dotnet@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --exclude=Objectivity.AutoFixture.XUnit2.AutoFakeItEasy.Tests,Objectivity.AutoFixture.XUnit2.AutoMoq.Tests,Objectivity.AutoFixture.XUnit2.AutoNSubstitute.Tests,Objectivity.AutoFixture.XUnit2.Core.Tests
+          command: monitor
+      - name: 📊 upload sarif file for GitHub Advanced Security Dashboard
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk
+        if: ${{ always() }}
